@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 public class FileServerComponent implements ApplicationRunner {
 
     private final String NEW_LINE = System.getProperty("line.separator");
+    private final String SPACE = " ";
 
     //Default 100 connections, can be changed by modifying in application.properties.
     @Value("${fileserver.connection.maximum:100}")
@@ -87,8 +88,12 @@ public class FileServerComponent implements ApplicationRunner {
     /**
      * Execute command.
      */
-    public String executeCommand(String command) {
+    public String executeCommand(String clientId, String command) {
+        if (connections.get(clientId) == null) {
+            return "Untrusted request.";
+        }
         if (COMMAND.index.name().equals(command)) {
+            StringBuilder sb = new StringBuilder();
             return fileSystemStorage.loadAll().filter(f -> f.toFile().getName().endsWith(".txt"))
                     .map(f -> {
                         String fileName = f.toFile().getName();
@@ -98,13 +103,18 @@ public class FileServerComponent implements ApplicationRunner {
                             basicFileAttributeView = Files.getFileAttributeView(f, BasicFileAttributeView.class);
                             fileOwnerAttributeView = Files.getFileAttributeView(f, FileOwnerAttributeView.class);
                             BasicFileAttributes basicFileAttributes = basicFileAttributeView.readAttributes();
-                            return fileOwnerAttributeView.getOwner().getName() + " " +
-                                    formatter.format(basicFileAttributes.creationTime().toInstant()) + " " +
-                                    formatter.format(basicFileAttributes.lastModifiedTime().toInstant()) + " " +
-                                    fileName;
+                            sb.setLength(0);
+                            sb.append(fileOwnerAttributeView.getOwner().getName());
+                            sb.append(SPACE);
+                            sb.append(formatter.format(basicFileAttributes.creationTime().toInstant()));
+                            sb.append(SPACE);
+                            sb.append(formatter.format(basicFileAttributes.lastModifiedTime().toInstant()));
+                            sb.append(SPACE);
+                            sb.append(fileName);
+                            return sb.toString();
                         } catch (IOException e) {
                             e.printStackTrace();
-                            return "Error while fetching file " + fileName + "'s info on server.";
+                            return "Error while fetching file " + fileName + "'s info.";
                         }
                     })
                     .collect(Collectors.joining(NEW_LINE));
@@ -118,9 +128,12 @@ public class FileServerComponent implements ApplicationRunner {
                 }
                 Files.lines(file).forEach(line -> sb.append(line + NEW_LINE));
             } catch (StorageFileNotFoundException ex) {
-                throw ex;
+                sb.setLength(0);
+                sb.append(ex.getMessage());
             } catch (Exception ex) {
-                throw new StorageException("Error when reading file: " + fileName, ex);
+                ex.printStackTrace();
+                sb.setLength(0);
+                sb.append("Error when reading file: " + fileName);
             }
             return sb.toString();
         } else {

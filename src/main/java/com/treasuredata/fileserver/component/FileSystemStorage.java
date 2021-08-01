@@ -10,6 +10,8 @@ import java.util.stream.Stream;
 
 public class FileSystemStorage {
 
+    private String rootDirectory;
+
 	private Path rootLocation;
 
 	/**
@@ -20,7 +22,7 @@ public class FileSystemStorage {
 			return Files.walk(this.rootLocation, 1)
 					.filter(path -> !path.equals(this.rootLocation));
 		} catch (IOException e) {
-			throw new StorageException("Failed to read files", e);
+			throw new StorageException("Failed to read files of directory: " + rootDirectory, e);
 		}
 	}
 
@@ -36,7 +38,8 @@ public class FileSystemStorage {
 	 */
 	public void setRootLocation(String dir) {
 		try {
-			this.rootLocation = Paths.get(dir);
+            rootDirectory = dir;
+			rootLocation = Paths.get(rootDirectory);
 			if (!Files.exists(rootLocation)) {
 				throw new StorageException("Directory does not exits.");
 			}

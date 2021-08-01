@@ -41,8 +41,8 @@ public class FileServerController {
     /**
      * Execute client command.
      */
-    @GetMapping("/client/command/{command}")
-    public ResponseEntity<String> executeCommand(@PathVariable("command") String command) {
-        return ResponseEntity.ok().body(fileServerComponent.executeCommand(command));
+    @GetMapping("/client/{clientId}/command/{command}")
+    public ResponseEntity<String> executeCommand(@PathVariable("clientId") String clientId, @PathVariable("command") String command) {
+        return ResponseEntity.ok().body(fileServerComponent.executeCommand(clientId, command));
     }
 }
