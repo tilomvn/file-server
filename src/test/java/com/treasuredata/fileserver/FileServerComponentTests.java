@@ -1,0 +1,103 @@
+package com.treasuredata.fileserver;
+
+
+import com.treasuredata.fileserver.component.FileServerComponent;
+import com.treasuredata.fileserver.component.exceptions.StorageFileNotFoundException;
+import com.treasuredata.fileserver.component.exceptions.StorageNotExistException;
+import com.treasuredata.fileserver.connection.response.ConnectionResponse;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.DefaultApplicationArguments;
+import org.springframework.http.HttpStatus;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class FileServerComponentTests {
+
+    Path testDirectory = Paths.get("src", "test", "resources");
+
+    FileServerComponent fileServerComponent = new FileServerComponent();
+
+    @Test
+    void testDoConnect() {
+        ConnectionResponse connectionResponse = fileServerComponent.doConnect();
+        assertNotNull(connectionResponse.getClientId());
+        assertEquals(HttpStatus.ACCEPTED.value(), connectionResponse.getStatus());
+    }
+
+    @Test
+    void testCloseConnect() {
+        ConnectionResponse connectionResponse = fileServerComponent.doConnect();
+        String clientId = connectionResponse.getClientId();
+
+        connectionResponse = fileServerComponent.closeConnection(clientId);
+        assertEquals(clientId, connectionResponse.getClientId());
+        assertEquals(HttpStatus.ACCEPTED.value(), connectionResponse.getStatus());
+    }
+
+    @Test
+    void testDoInitDirectorySuccess() {
+        fileServerComponent.run(new DefaultApplicationArguments(testDirectory.toString()));
+    }
+
+    @Test
+    void testDoInitDirectoryReturnDirectoryNotExist() {
+        assertThrows(StorageNotExistException.class, () -> fileServerComponent.run(new DefaultApplicationArguments(testDirectory.toString() + "/test")));
+    }
+
+    @Test
+    void testExecuteCommandWithoutConnection() throws Exception {
+        String response = fileServerComponent.executeCommand("", "index");
+        assertEquals("Untrusted Request.", response);
+    }
+
+    @Test
+    void testExecuteCommandReturnListFile() throws Exception {
+        String responseFile1 = "myFile.txt";
+        String responseFile2 = "textFile.txt";
+
+        ConnectionResponse connectionResponse = fileServerComponent.doConnect();
+        String clientId = connectionResponse.getClientId();
+        fileServerComponent.run(new DefaultApplicationArguments(testDirectory.toString()));
+
+        String response = fileServerComponent.executeCommand(clientId, "index");
+
+        assertTrue(response.indexOf(responseFile1) > 0);
+        assertTrue(response.indexOf(responseFile2) > 0);
+    }
+
+    @Test
+    void testExecuteCommandReturnFileContent() throws Exception {
+        String testFile = "textFile.txt";
+        String NEW_LINE = System.getProperty("line.separator");
+
+        ConnectionResponse connectionResponse = fileServerComponent.doConnect();
+        String clientId = connectionResponse.getClientId();
+        fileServerComponent.run(new DefaultApplicationArguments(testDirectory.toString()));
+
+        String response = fileServerComponent.executeCommand(clientId, "get " + testFile);
+
+        Path file = Paths.get("src", "test", "resources", testFile);
+        StringBuilder sb = new StringBuilder();
+        Files.lines(file).forEach(line -> sb.append(line + NEW_LINE));
+
+        assertEquals(sb.toString(), response);
+    }
+
+    @Test
+    void testExecuteCommandReturnFileDoesNotExist() {
+        String testFile = "textFileAAA.txt";
+
+        ConnectionResponse connectionResponse = fileServerComponent.doConnect();
+        String clientId = connectionResponse.getClientId();
+        fileServerComponent.run(new DefaultApplicationArguments(testDirectory.toString()));
+
+        assertThrows(StorageFileNotFoundException.class, () -> fileServerComponent.executeCommand(clientId, "get " + testFile));
+    }
+}

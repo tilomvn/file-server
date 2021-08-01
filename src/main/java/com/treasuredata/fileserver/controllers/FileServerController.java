@@ -20,13 +20,9 @@ public class FileServerController {
      * Client connection gateway.
      */
     @GetMapping("/client/connect")
-    public ResponseEntity<String> listenToClient() throws Exception {
+    public ResponseEntity<String> listenToClient() {
         ConnectionResponse connectionResponse = fileServerComponent.doConnect();
-        String body = connectionResponse.getClientId();
-        if (body == null) {
-            body = connectionResponse.getMessage();
-        }
-        return ResponseEntity.status(connectionResponse.getStatus()).body(body);
+        return ResponseEntity.status(connectionResponse.getStatus()).body(connectionResponse.getClientId());
     }
 
     /**
@@ -42,7 +38,8 @@ public class FileServerController {
      * Execute client command.
      */
     @GetMapping("/client/{clientId}/command/{command}")
-    public ResponseEntity<String> executeCommand(@PathVariable("clientId") String clientId, @PathVariable("command") String command) {
+    public ResponseEntity<String> executeCommand(@PathVariable("clientId") String clientId,
+                                                 @PathVariable("command") String command) throws Exception {
         return ResponseEntity.ok().body(fileServerComponent.executeCommand(clientId, command));
     }
 }

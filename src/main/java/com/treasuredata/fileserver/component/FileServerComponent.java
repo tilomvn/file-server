@@ -1,9 +1,7 @@
 package com.treasuredata.fileserver.component;
 
-import com.treasuredata.fileserver.component.exceptions.StorageException;
 import com.treasuredata.fileserver.component.exceptions.StorageFileNotFoundException;
 import com.treasuredata.fileserver.connection.response.ConnectionResponse;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.http.HttpStatus;
@@ -12,21 +10,15 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileOwnerAttributeView;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 @Component
 public class FileServerComponent implements ApplicationRunner {
@@ -34,20 +26,16 @@ public class FileServerComponent implements ApplicationRunner {
     private final String NEW_LINE = System.getProperty("line.separator");
     private final String SPACE = " ";
 
-    //Default 100 connections, can be changed by modifying in application.properties.
-    @Value("${fileserver.connection.maximum:100}")
-    private final int MAX_CONNECTION = 100;
-
-    private FileSystemStorage fileSystemStorage = new FileSystemStorage();
+    private final FileSystemStorage fileSystemStorage;
 
     //Thread-safety connection storage
     private Map<String, ConnectionResponse> connections = new Hashtable<>();
 
-    //Connection pool, allow maximum 100 connection at same time
-    //otherwise, connection must wait for idle pool
-    private ExecutorService executorService = Executors.newFixedThreadPool(MAX_CONNECTION);
-
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
+
+    public FileServerComponent() {
+        fileSystemStorage = new FileSystemStorage();
+    }
 
     /**
      * Do init directory.
@@ -55,86 +43,55 @@ public class FileServerComponent implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         if (args.getNonOptionArgs().size() == 0) {
-            System.out.println("Missing directory parameter.");
-            System.out.println("Application failed on starting.");
-            System.exit(0);
+            return;
         }
-
-        try {
-            fileSystemStorage.setRootLocation(args.getNonOptionArgs().get(0));
-        } catch (Exception ex) {
-            System.out.println(ex.getMessage());
-            System.exit(0);
-        }
+        fileSystemStorage.setRootLocation(args.getNonOptionArgs().get(0));
     }
 
     /**
      * Do connection.
      */
-    public ConnectionResponse doConnect() throws ExecutionException, InterruptedException {
-        Future<ConnectionResponse> future = executorService.submit(() -> {
-            if (connections.size() == MAX_CONNECTION) {
-                return ConnectionResponse.of(null, HttpStatus.INSUFFICIENT_STORAGE, "Connection is full. Please try again later.");
-            }
-            String clientId = UUID.randomUUID().toString();
-            ConnectionResponse response = ConnectionResponse.of(clientId, HttpStatus.ACCEPTED, "Welcome " + clientId);
-            connections.put(clientId, response);
-            System.out.println("Client[" + clientId + "] connected.");
-            return response;
-        });
-        return future.get();
+    public ConnectionResponse doConnect() {
+        String clientId = UUID.randomUUID().toString();
+        ConnectionResponse response = ConnectionResponse.of(clientId, HttpStatus.ACCEPTED, "Wellcome " + clientId);
+        connections.put(clientId, response);
+        System.out.println("Client[" + clientId + "] connected.");
+        return response;
     }
 
     /**
      * Execute command.
      */
-    public String executeCommand(String clientId, String command) {
+    public String executeCommand(String clientId, String command) throws IOException {
         if (connections.get(clientId) == null) {
-            return "Untrusted request.";
+            return "Untrusted Request.";
         }
         if (COMMAND.index.name().equals(command)) {
+            List<Path> listFile = fileSystemStorage.loadAll();
             StringBuilder sb = new StringBuilder();
-            return fileSystemStorage.loadAll().filter(f -> f.toFile().getName().endsWith(".txt"))
-                    .map(f -> {
-                        String fileName = f.toFile().getName();
-                        BasicFileAttributeView basicFileAttributeView;
-                        FileOwnerAttributeView fileOwnerAttributeView;
-                        try {
-                            basicFileAttributeView = Files.getFileAttributeView(f, BasicFileAttributeView.class);
-                            fileOwnerAttributeView = Files.getFileAttributeView(f, FileOwnerAttributeView.class);
-                            BasicFileAttributes basicFileAttributes = basicFileAttributeView.readAttributes();
-                            sb.setLength(0);
-                            sb.append(fileOwnerAttributeView.getOwner().getName());
-                            sb.append(SPACE);
-                            sb.append(formatter.format(basicFileAttributes.creationTime().toInstant()));
-                            sb.append(SPACE);
-                            sb.append(formatter.format(basicFileAttributes.lastModifiedTime().toInstant()));
-                            sb.append(SPACE);
-                            sb.append(fileName);
-                            return sb.toString();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            return "Error while fetching file " + fileName + "'s info.";
-                        }
-                    })
-                    .collect(Collectors.joining(NEW_LINE));
+            for (Path file : listFile) {
+                String fileName = file.toFile().getName();
+                BasicFileAttributeView basicFileAttributeView = Files.getFileAttributeView(file, BasicFileAttributeView.class);
+                FileOwnerAttributeView fileOwnerAttributeView = Files.getFileAttributeView(file, FileOwnerAttributeView.class);
+                BasicFileAttributes basicFileAttributes = basicFileAttributeView.readAttributes();
+                sb.append(fileOwnerAttributeView.getOwner().getName());
+                sb.append(SPACE);
+                sb.append(formatter.format(basicFileAttributes.creationTime().toInstant()));
+                sb.append(SPACE);
+                sb.append(formatter.format(basicFileAttributes.lastModifiedTime().toInstant()));
+                sb.append(SPACE);
+                sb.append(fileName);
+                sb.append(NEW_LINE);
+            }
+            return sb.toString();
         } else if (command.startsWith(COMMAND.get.value)) {
             String fileName = command.replace(COMMAND.get.value, "");
-            StringBuilder sb = new StringBuilder();
-            try {
-                Path file = fileSystemStorage.load(fileName);
-                if (!Files.exists(file)) {
-                    throw new StorageFileNotFoundException("File " + fileName + " does not exist.");
-                }
-                Files.lines(file).forEach(line -> sb.append(line + NEW_LINE));
-            } catch (StorageFileNotFoundException ex) {
-                sb.setLength(0);
-                sb.append(ex.getMessage());
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                sb.setLength(0);
-                sb.append("Error when reading file: " + fileName);
+            Path file = fileSystemStorage.load(fileName);
+            if (!Files.exists(file)) {
+                throw new StorageFileNotFoundException("File " + fileName + " does not exist.");
             }
+            StringBuilder sb = new StringBuilder();
+            Files.lines(file).forEach(line -> sb.append(line + NEW_LINE));
             return sb.toString();
         } else {
             return COMMAND.unknown.value;
@@ -146,9 +103,6 @@ public class FileServerComponent implements ApplicationRunner {
      */
     public ConnectionResponse closeConnection(String clientId) {
         ConnectionResponse response = connections.remove(clientId);
-        if (response == null) {
-            return ConnectionResponse.of(clientId, HttpStatus.OK, "Connection closed.");
-        }
         response.setMessage("Connection closed.");
         System.out.println("Client[" + clientId + "] connection closed.");
         return response;
