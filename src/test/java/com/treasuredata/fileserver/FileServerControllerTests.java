@@ -59,7 +59,7 @@ class FileServerControllerTests {
     }
 
     @Test
-    void testExecuteCommand() throws Exception {
+    void testExecuteCommandReturnListFile() throws Exception {
         String listFiles = "NghiaHo 2021-05-08 13:00 2021-05-08 14:22 readme.txt";
         when(fileServerComponent.executeCommand(eq(clientId), eq("index"))).thenReturn(listFiles);
 

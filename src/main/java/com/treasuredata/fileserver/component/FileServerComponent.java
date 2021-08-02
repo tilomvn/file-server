@@ -1,5 +1,6 @@
 package com.treasuredata.fileserver.component;
 
+import com.treasuredata.fileserver.component.exceptions.StorageException;
 import com.treasuredata.fileserver.component.exceptions.StorageFileNotFoundException;
 import com.treasuredata.fileserver.connection.response.ConnectionResponse;
 import org.springframework.boot.ApplicationArguments;
@@ -38,14 +39,16 @@ public class FileServerComponent implements ApplicationRunner {
     }
 
     /**
-     * Do init directory.
+     * Do init directory from commandline parameter.
      */
     @Override
     public void run(ApplicationArguments args) {
-        if (args.getNonOptionArgs().size() == 0) {
-            return;
+        if (args.getNonOptionArgs().size() != 0) {
+            fileSystemStorage.setRootLocation(args.getNonOptionArgs().get(0));
+        } else {
+            System.out.println("Missing directory parameter.");
+            throw new StorageException("Missing directory parameter.");
         }
-        fileSystemStorage.setRootLocation(args.getNonOptionArgs().get(0));
     }
 
     /**

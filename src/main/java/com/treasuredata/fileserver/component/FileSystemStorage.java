@@ -12,6 +12,9 @@ import java.util.stream.Collectors;
 
 public class FileSystemStorage {
 
+    private final String DIRECTORY_NOT_EXIST = "Directory does not exist.";
+    private final String FILE_NOT_EXIST = "File %s does not exist.";
+
 	private Path rootLocation;
 
 	/**
@@ -19,7 +22,7 @@ public class FileSystemStorage {
 	 */
 	public List<Path> loadAll() throws IOException {
         if (rootLocation == null) {
-            throw new StorageFileNotFoundException("Directory does not exist.");
+            throw new StorageFileNotFoundException(DIRECTORY_NOT_EXIST);
         }
         return Files.walk(rootLocation, 1)
                 .filter(path -> !path.equals(rootLocation) && path.toFile().getName().endsWith(".txt"))
@@ -31,7 +34,7 @@ public class FileSystemStorage {
 	 */
 	public Path load(String filename) {
 	    if (rootLocation == null) {
-	        throw new StorageFileNotFoundException("File " + filename + " does not exist.");
+	        throw new StorageFileNotFoundException(String.format(FILE_NOT_EXIST, filename));
         }
 		return rootLocation.resolve(filename);
 	}
@@ -40,10 +43,10 @@ public class FileSystemStorage {
 	 * Init directory.
 	 */
 	public void setRootLocation(String dir) {
-        rootLocation = Paths.get(dir);
-        if (!Files.exists(rootLocation)) {
-            rootLocation = null;
-            throw new StorageNotExistException("Directory does not exist.");
-        }
+		rootLocation = Paths.get(dir);
+		if (!Files.exists(rootLocation)) {
+			System.out.println(DIRECTORY_NOT_EXIST);
+			throw new StorageNotExistException(DIRECTORY_NOT_EXIST);
+		}
 	}
 }

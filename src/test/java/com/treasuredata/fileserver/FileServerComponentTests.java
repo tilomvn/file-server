@@ -2,6 +2,7 @@ package com.treasuredata.fileserver;
 
 
 import com.treasuredata.fileserver.component.FileServerComponent;
+import com.treasuredata.fileserver.component.exceptions.StorageException;
 import com.treasuredata.fileserver.component.exceptions.StorageFileNotFoundException;
 import com.treasuredata.fileserver.component.exceptions.StorageNotExistException;
 import com.treasuredata.fileserver.connection.response.ConnectionResponse;
@@ -25,36 +26,18 @@ class FileServerComponentTests {
     FileServerComponent fileServerComponent = new FileServerComponent();
 
     @Test
-    void testDoConnect() {
-        ConnectionResponse connectionResponse = fileServerComponent.doConnect();
-        assertNotNull(connectionResponse.getClientId());
-        assertEquals(HttpStatus.ACCEPTED.value(), connectionResponse.getStatus());
-    }
-
-    @Test
-    void testCloseConnect() {
-        ConnectionResponse connectionResponse = fileServerComponent.doConnect();
-        String clientId = connectionResponse.getClientId();
-
-        connectionResponse = fileServerComponent.closeConnection(clientId);
-        assertEquals(clientId, connectionResponse.getClientId());
-        assertEquals(HttpStatus.ACCEPTED.value(), connectionResponse.getStatus());
-    }
-
-    @Test
     void testDoInitDirectorySuccess() {
         fileServerComponent.run(new DefaultApplicationArguments(testDirectory.toString()));
     }
 
     @Test
-    void testDoInitDirectoryReturnDirectoryNotExist() {
-        assertThrows(StorageNotExistException.class, () -> fileServerComponent.run(new DefaultApplicationArguments(testDirectory.toString() + "/test")));
+    void testDoInitDirectoryWithoutCommandLineParameter() {
+        assertThrows(StorageException.class, () -> fileServerComponent.run(new DefaultApplicationArguments()));
     }
 
     @Test
-    void testExecuteCommandWithoutConnection() throws Exception {
-        String response = fileServerComponent.executeCommand("", "index");
-        assertEquals("Untrusted Request.", response);
+    void testDoInitDirectoryReturnDirectoryNotExist() {
+        assertThrows(StorageNotExistException.class, () -> fileServerComponent.run(new DefaultApplicationArguments(testDirectory.toString() + "/test")));
     }
 
     @Test
@@ -99,5 +82,28 @@ class FileServerComponentTests {
         fileServerComponent.run(new DefaultApplicationArguments(testDirectory.toString()));
 
         assertThrows(StorageFileNotFoundException.class, () -> fileServerComponent.executeCommand(clientId, "get " + testFile));
+    }
+
+    @Test
+    void testDoConnect() {
+        ConnectionResponse connectionResponse = fileServerComponent.doConnect();
+        assertNotNull(connectionResponse.getClientId());
+        assertEquals(HttpStatus.ACCEPTED.value(), connectionResponse.getStatus());
+    }
+
+    @Test
+    void testCloseConnect() {
+        ConnectionResponse connectionResponse = fileServerComponent.doConnect();
+        String clientId = connectionResponse.getClientId();
+
+        connectionResponse = fileServerComponent.closeConnection(clientId);
+        assertEquals(clientId, connectionResponse.getClientId());
+        assertEquals(HttpStatus.ACCEPTED.value(), connectionResponse.getStatus());
+    }
+
+    @Test
+    void testExecuteCommandWithoutConnection() throws Exception {
+        String response = fileServerComponent.executeCommand("", "index");
+        assertEquals("Untrusted Request.", response);
     }
 }
