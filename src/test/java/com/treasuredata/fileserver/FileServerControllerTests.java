@@ -23,7 +23,6 @@ import java.util.UUID;
 
 import static org.mockito.Mockito.when;
 
-
 @SpringBootTest
 @AutoConfigureMockMvc
 class FileServerControllerTests {

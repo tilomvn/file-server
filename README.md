@@ -1,3 +1,6 @@
+# Application Protocols
+* Application can support TCP/IP or HTTP protocol, by default it run on TCP/IP.
+* Can switch to HTTP by changing key app.run.mode=SERVICE.
 # Environment Requirement
 * Must have Java 8 or above.
 # How to build and run

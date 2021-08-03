@@ -1,6 +1,5 @@
 package com.treasuredata.fileserver;
 
-
 import com.treasuredata.fileserver.component.FileServerComponent;
 import com.treasuredata.fileserver.component.exceptions.StorageException;
 import com.treasuredata.fileserver.component.exceptions.StorageFileNotFoundException;
@@ -13,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -68,8 +69,13 @@ class FileServerComponentTests {
 
         Path file = Paths.get("src", "test", "resources", testFile);
         StringBuilder sb = new StringBuilder();
-        Files.lines(file).forEach(line -> sb.append(line + NEW_LINE));
-
+        List<String> expectedFileContent = Files.lines(file).collect(Collectors.toList());
+        for (int i = 0; i < expectedFileContent.size(); i++) {
+            sb.append(expectedFileContent.get(i));
+            if (i < expectedFileContent.size() - 1) {
+                sb.append(NEW_LINE);
+            }
+        }
         assertEquals(sb.toString(), response);
     }
 
