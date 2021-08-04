@@ -1,5 +1,6 @@
 package com.treasuredata.fileserver;
 
+import com.treasuredata.fileserver.order.TestOrder;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -8,6 +9,7 @@ import java.nio.file.Paths;
 import java.awt.Robot;
 import java.awt.event.KeyEvent;
 
+@TestOrder(4)
 class FileServerApplicationTests {
 
     //Test directory
@@ -15,10 +17,10 @@ class FileServerApplicationTests {
 
     //@Test
     void testRun() throws Exception {
-        //Stop application after started
+        //Stop application after started -> throw headless exception ???
         new Thread(() -> {
             try {
-                Thread.sleep(2000);
+                Thread.sleep(5000);
                 Robot robot = new Robot();
                 robot.keyPress(KeyEvent.VK_CONTROL);
                 robot.keyPress(KeyEvent.VK_C);

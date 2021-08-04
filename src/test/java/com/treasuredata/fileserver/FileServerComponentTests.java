@@ -5,6 +5,7 @@ import com.treasuredata.fileserver.component.exceptions.StorageException;
 import com.treasuredata.fileserver.component.exceptions.StorageFileNotFoundException;
 import com.treasuredata.fileserver.component.exceptions.StorageNotExistException;
 import com.treasuredata.fileserver.connection.response.ConnectionResponse;
+import com.treasuredata.fileserver.order.TestOrder;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@TestOrder(1)
 class FileServerComponentTests {
 
     Path testDirectory = Paths.get("src", "test", "resources");

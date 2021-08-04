@@ -3,6 +3,7 @@ package com.treasuredata.fileserver;
 import com.treasuredata.fileserver.component.SocketFileServerComponent;
 import com.treasuredata.fileserver.component.exceptions.StorageException;
 import com.treasuredata.fileserver.connection.response.ConnectionResponse;
+import com.treasuredata.fileserver.order.TestOrder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -21,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@TestOrder(3)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class SocketFileComponentTests {
 
@@ -33,33 +35,20 @@ public class SocketFileComponentTests {
 
     String clientId;
 
-    boolean clientDone;
+    boolean clientDone1;
+    boolean clientDone2;
+
+    short testPort = 4002;
 
     @BeforeAll
     void init() throws Exception {
-        serverSocket = new ServerSocket((short)4001);
+        serverSocket = new ServerSocket(4002);
         socketFileServerComponent = new SocketFileServerComponent(serverSocket);
     }
 
     @Test
     void testRunFailedByNonArgument() {
         assertThrows(StorageException.class,() -> socketFileServerComponent.run(new String[] {}));
-    }
-
-    @Test
-    void testRunSocketListeningSuccess() {
-        //Using another thread to stop socket after run test function.
-        new Thread(() -> {
-            try {
-                Thread.sleep(2000);
-                serverSocket.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }).start();
-        //Will cause the SocketException because of the stopping above.
-        //The main purpose of this test case is verify that the socket is listening.
-        assertThrows(SocketException.class, () -> socketFileServerComponent.run(new String[] {path.toString()}));
     }
 
     @Test
@@ -77,12 +66,14 @@ public class SocketFileComponentTests {
 
     @Test
     void testClientProcessor() {
-        clientDone = false;
+        clientDone1 = false;
+        clientDone2 = false;
         //Using another thread to stop socket after run test function.
         new Thread(() -> {
             try {
-                while (!clientDone) {}
+                while (!clientDone1 || !clientDone2) {}
                 serverSocket.close();
+                System.out.println("Closed test server socket");
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -93,9 +84,11 @@ public class SocketFileComponentTests {
         //Client processor crash
         new Thread(() -> {
             try {
+                Thread.sleep(3000);
+                Socket client = new Socket("localhost", testPort);
                 Thread.sleep(2000);
-                Socket client = new Socket("localhost", 4001);
                 client.close();
+                clientDone1 = true;
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -104,7 +97,7 @@ public class SocketFileComponentTests {
         new Thread(() -> {
             try {
                 Thread.sleep(2000);
-                Socket client = new Socket("localhost", 4001);
+                Socket client = new Socket("localhost", testPort);
                 DataOutputStream out = new DataOutputStream(client.getOutputStream());
 
                 //Get List File ==================================================
@@ -163,7 +156,7 @@ public class SocketFileComponentTests {
                 out.close();
                 client.close();
 
-                clientDone = true;
+                clientDone2 = true;
             } catch (Exception e) {
                 e.printStackTrace();
             }

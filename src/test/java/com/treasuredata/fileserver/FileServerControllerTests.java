@@ -3,6 +3,7 @@ package com.treasuredata.fileserver;
 import com.treasuredata.fileserver.component.FileServerComponent;
 import com.treasuredata.fileserver.component.exceptions.StorageFileNotFoundException;
 import com.treasuredata.fileserver.connection.response.ConnectionResponse;
+import com.treasuredata.fileserver.order.TestOrder;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -23,6 +24,7 @@ import java.util.UUID;
 
 import static org.mockito.Mockito.when;
 
+@TestOrder(2)
 @SpringBootTest
 @AutoConfigureMockMvc
 class FileServerControllerTests {
