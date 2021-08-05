@@ -13,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -70,15 +69,8 @@ class FileServerComponentTests {
         String response = fileServerComponent.executeCommand(clientId, "get " + testFile);
 
         Path file = Paths.get("src", "test", "resources", testFile);
-        StringBuilder sb = new StringBuilder();
-        List<String> expectedFileContent = Files.lines(file).collect(Collectors.toList());
-        for (int i = 0; i < expectedFileContent.size(); i++) {
-            sb.append(expectedFileContent.get(i));
-            if (i < expectedFileContent.size() - 1) {
-                sb.append(NEW_LINE);
-            }
-        }
-        assertEquals(sb.toString(), response);
+        String expectedFileContent = Files.lines(file).collect(Collectors.joining(NEW_LINE));
+        assertEquals(expectedFileContent, response);
     }
 
     @Test
